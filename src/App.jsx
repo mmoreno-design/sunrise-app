@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import MonthStrip from './components/MonthStrip';
 import AgendaView from './components/AgendaView';
 import BottomNav from './components/BottomNav';
@@ -8,8 +8,32 @@ import NewEventModal from './components/NewEventModal';
 import ConnectCalendar from './components/ConnectCalendar';
 import SettingsView from './components/SettingsView';
 import { useGoogleCalendar } from './hooks/useGoogleCalendar';
+import { usePlanningCenter } from './hooks/usePlanningCenter';
 import { useWeather } from './hooks/useWeather';
 import { useGeolocation } from './hooks/useGeolocation';
+
+function mergeEvents(googleEvents, pcoEvents) {
+  // Collect all date keys from both sources
+  const allKeys = new Set([
+    ...Object.keys(googleEvents || {}),
+    ...Object.keys(pcoEvents || {}),
+  ]);
+
+  const merged = {};
+  for (const key of allKeys) {
+    const gEvs = googleEvents?.[key] || [];
+    const pEvs = pcoEvents?.[key] || [];
+    const combined = [...gEvs, ...pEvs];
+    // Sort by start time within each day
+    combined.sort((a, b) => {
+      const aTime = a.start?.dateTime || a.start?.date || '';
+      const bTime = b.start?.dateTime || b.start?.date || '';
+      return aTime.localeCompare(bTime);
+    });
+    merged[key] = combined;
+  }
+  return merged;
+}
 
 export default function App() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -19,12 +43,13 @@ export default function App() {
 
   const { location } = useGeolocation();
   const { weather, loading: weatherLoading } = useWeather(location);
+
   const {
     isSignedIn,
-    events,
+    events: googleEvents,
     calendars,
-    loading,
-    error,
+    loading: googleLoading,
+    error: googleError,
     apiReady,
     signIn,
     signOut,
@@ -33,6 +58,25 @@ export default function App() {
     deleteEvent,
     hasClientId,
   } = useGoogleCalendar();
+
+  const {
+    events: pcoEvents,
+    loading: pcoLoading,
+    error: pcoError,
+    orgName: pcoOrgName,
+    enabled: pcoEnabled,
+    setEnabled: setPcoEnabled,
+    hasCredentials: pcoHasCredentials,
+    refresh: pcoRefresh,
+  } = usePlanningCenter();
+
+  const mergedEvents = useMemo(
+    () => mergeEvents(googleEvents, pcoEnabled ? pcoEvents : {}),
+    [googleEvents, pcoEvents, pcoEnabled]
+  );
+
+  const loading = googleLoading || pcoLoading;
+  const error = googleError;
 
   const handleSelectDate = useCallback((date) => {
     setSelectedDate(date);
@@ -45,11 +89,8 @@ export default function App() {
   }, []);
 
   const handleTabChange = useCallback((tab) => {
-    if (tab === 'today') {
-      handleTodayTab();
-    } else {
-      setActiveTab(tab);
-    }
+    if (tab === 'today') handleTodayTab();
+    else setActiveTab(tab);
   }, [handleTodayTab]);
 
   const handleEventClick = useCallback((event) => {
@@ -57,6 +98,8 @@ export default function App() {
   }, []);
 
   const handleDeleteEvent = useCallback(async (event) => {
+    // PCO events are read-only — don't attempt delete
+    if (event._source === 'planningcenter') return;
     const calendarId = calendars.find(c => c.summary === event.calendarName)?.id || 'primary';
     await deleteEvent(event.id, calendarId);
   }, [deleteEvent, calendars]);
@@ -64,6 +107,10 @@ export default function App() {
   const handleCreateEvent = useCallback(async (eventData) => {
     await createEvent(eventData);
   }, [createEvent]);
+
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([fetchAllEvents(), pcoRefresh()]);
+  }, [fetchAllEvents, pcoRefresh]);
 
   const isToday = selectedDate.toDateString() === new Date().toDateString();
 
@@ -85,6 +132,11 @@ export default function App() {
           onSignIn={signIn}
           calendars={calendars}
           hasClientId={hasClientId}
+          pcoEnabled={pcoEnabled}
+          setPcoEnabled={setPcoEnabled}
+          pcoOrgName={pcoOrgName}
+          pcoHasCredentials={pcoHasCredentials}
+          pcoError={pcoError}
         />
       ) : (
         <>
@@ -93,7 +145,7 @@ export default function App() {
           <MonthStrip
             selectedDate={selectedDate}
             onSelectDate={handleSelectDate}
-            events={events}
+            events={mergedEvents}
             weather={weather}
           />
 
@@ -108,10 +160,10 @@ export default function App() {
 
           <AgendaView
             selectedDate={selectedDate}
-            events={events}
+            events={mergedEvents}
             loading={loading}
             onEventClick={handleEventClick}
-            onRefresh={fetchAllEvents}
+            onRefresh={handleRefresh}
           />
         </>
       )}
@@ -126,7 +178,7 @@ export default function App() {
         <EventDetailModal
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
-          onDelete={isSignedIn ? handleDeleteEvent : null}
+          onDelete={selectedEvent._source !== 'planningcenter' && isSignedIn ? handleDeleteEvent : null}
         />
       )}
 

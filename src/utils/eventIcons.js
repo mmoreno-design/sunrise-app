@@ -9,7 +9,12 @@ export function getEventIcon(title = '') {
   if (/school|class|lecture|exam|study|course|lesson/.test(t)) return '📚';
   if (/doctor|appointment|dentist|therapy|clinic|hospital|checkup/.test(t)) return '🏥';
   if (/gym|workout|exercise|yoga|run|swim|sport/.test(t)) return '🏋️';
-  if (/party|celebration|wedding|anniversary|graduation/.test(t)) return '🎉';
+  if (/funeral|memorial/.test(t)) return '🕊️';
+  if (/baptism|baptize/.test(t)) return '💧';
+  if (/confirmation/.test(t)) return '✝️';
+  if (/rehearsal/.test(t)) return '🎭';
+  if (/wedding/.test(t)) return '💒';
+  if (/party|celebration|anniversary|graduation/.test(t)) return '🎉';
   if (/coffee|cafe/.test(t)) return '☕';
   if (/deadline|due|submit/.test(t)) return '⏰';
   return '📅';

@@ -1,19 +1,8 @@
-export default function SettingsView({ isSignedIn, onSignOut, onSignIn, calendars, hasClientId }) {
+export default function SettingsView({
+  isSignedIn, onSignOut, onSignIn, calendars, hasClientId,
+  pcoEnabled, setPcoEnabled, pcoOrgName, pcoHasCredentials, pcoError,
+}) {
   const appVersion = '1.0.0';
-
-  const installPromptRef = { current: null };
-  if (typeof window !== 'undefined') {
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      installPromptRef.current = e;
-    });
-  }
-
-  const handleInstall = () => {
-    if (installPromptRef.current) {
-      installPromptRef.current.prompt();
-    }
-  };
 
   return (
     <div className="flex-1 overflow-y-auto no-scrollbar scroll-container pb-4">
@@ -22,10 +11,10 @@ export default function SettingsView({ isSignedIn, onSignOut, onSignIn, calendar
         <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Settings</h1>
       </div>
 
-      {/* Account section */}
+      {/* Google Calendar section */}
       <div className="px-4 mb-4">
         <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-secondary)' }}>
-          Account
+          Google Calendar
         </p>
         <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card-bg)' }}>
           {isSignedIn ? (
@@ -66,7 +55,7 @@ export default function SettingsView({ isSignedIn, onSignOut, onSignIn, calendar
         </div>
       </div>
 
-      {/* Calendars */}
+      {/* Google Calendars list */}
       {isSignedIn && calendars.length > 0 && (
         <div className="px-4 mb-4">
           <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-secondary)' }}>
@@ -89,7 +78,66 @@ export default function SettingsView({ isSignedIn, onSignOut, onSignIn, calendar
         </div>
       )}
 
-      {/* Install PWA */}
+      {/* Planning Center section */}
+      <div className="px-4 mb-4">
+        <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-secondary)' }}>
+          Planning Center
+        </p>
+        <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card-bg)' }}>
+          {!pcoHasCredentials ? (
+            <div className="px-4 py-3">
+              <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+                ⛪ Not configured
+              </p>
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                Add <code className="px-1 rounded text-xs" style={{ background: 'rgba(0,0,0,0.08)' }}>VITE_PCO_APP_ID</code> and{' '}
+                <code className="px-1 rounded text-xs" style={{ background: 'rgba(0,0,0,0.08)' }}>VITE_PCO_SECRET</code> to your .env.local to connect.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Status row */}
+              <div className="px-4 py-3 flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                  style={{ background: '#6B4FBB' }}
+                >
+                  ⛪
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                    {pcoOrgName || 'Planning Center'}
+                  </p>
+                  <p className="text-xs" style={{ color: pcoError ? '#DC2626' : '#7ED321' }}>
+                    {pcoError ? `Error: ${pcoError.slice(0, 60)}` : 'Connected'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Toggle row */}
+              <div className="h-px mx-4" style={{ background: '#e8e8e8' }} />
+              <div className="px-4 py-3 flex items-center justify-between">
+                <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+                  Show Planning Center events
+                </p>
+                <button
+                  onClick={() => setPcoEnabled(!pcoEnabled)}
+                  className="relative w-12 h-6 rounded-full transition-colors duration-200 flex-shrink-0"
+                  style={{ background: pcoEnabled ? '#6B4FBB' : '#e0e0e0' }}
+                  aria-label="Toggle Planning Center events"
+                >
+                  <span
+                    className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200"
+                    style={{ transform: pcoEnabled ? 'translateX(26px)' : 'translateX(2px)' }}
+                  />
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* App section */}
       <div className="px-4 mb-4">
         <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-secondary)' }}>
           App

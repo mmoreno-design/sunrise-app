@@ -6,9 +6,10 @@ A progressive web app (PWA) inspired by the classic Sunrise Calendar iPhone app 
 
 - **Month Strip** — compact horizontal calendar with event dots and weather icons
 - **Agenda View** — scrollable daily event list with smart icons, pull-to-refresh
-- **Smart Event Icons** — auto-detects lunch, calls, meetings, birthdays, flights, church, school, doctor, etc.
+- **Smart Event Icons** — auto-detects lunch, calls, meetings, birthdays, flights, church, funerals, baptisms, weddings, and more
 - **Weather** — live weather via Open-Meteo API (no API key required)
 - **Google Calendar** — OAuth 2.0 integration, reads all your calendars with color coding
+- **Planning Center** — pulls events from Planning Center Calendar API, shown in purple alongside Google events
 - **New Event** — natural language parsing ("Lunch with Lisa tomorrow at noon") + manual mode
 - **PWA** — installable to iPhone home screen, offline support via service worker
 - **Dark Mode** — follows system preference
@@ -69,9 +70,28 @@ Restart the dev server.
 
 1. Push to GitHub
 2. Import at [vercel.com](https://vercel.com)
-3. Add environment variable: `VITE_GOOGLE_CLIENT_ID`
+3. Add environment variables:
+   - `VITE_GOOGLE_CLIENT_ID` — your Google OAuth client ID
+   - `VITE_PCO_APP_ID` — your Planning Center Application ID (if using PCO)
+   - `VITE_PCO_SECRET` — your Planning Center Secret (if using PCO)
 4. Add your Vercel domain to OAuth authorized origins in Google Cloud Console
 5. Deploy
+
+---
+
+## Planning Center Setup
+
+1. Log in at [api.planningcenteronline.com](https://api.planningcenteronline.com)
+2. Go to **My Apps** → **New App**
+3. Copy the **Application ID** and **Secret**
+4. Add them to `.env.local`:
+
+```env
+VITE_PCO_APP_ID=your_app_id_here
+VITE_PCO_SECRET=your_secret_here
+```
+
+Planning Center events appear in **purple** (`#6B4FBB`) alongside Google Calendar events. They refresh automatically every 15 minutes. You can toggle them on/off in Settings.
 
 ---
 
@@ -90,9 +110,10 @@ src/
     SettingsView.jsx      Settings / account management
     WeatherBar.jsx        Current weather display
   hooks/
-    useGoogleCalendar.js  Google Calendar OAuth + CRUD
-    useGeolocation.js     Browser geolocation (with fallback)
-    useWeather.js         Open-Meteo weather data
+    useGoogleCalendar.js   Google Calendar OAuth + CRUD
+    usePlanningCenter.js   Planning Center Calendar API (Basic Auth, 15-min refresh)
+    useGeolocation.js      Browser geolocation (with fallback)
+    useWeather.js          Open-Meteo weather data
   utils/
     dateHelpers.js        Date formatting utilities
     eventIcons.js         Keyword → emoji icon mapping
